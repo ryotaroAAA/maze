@@ -19,7 +19,6 @@ from enum import auto, Enum
 
 import argparse
 import pygame
-
 class ObjAttr(Enum):
     WALL = auto() 
     AISLE = auto() 
