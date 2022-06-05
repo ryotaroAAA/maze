@@ -1,6 +1,6 @@
 import copy
 from telnetlib import NOP
-from tkinter import LEFT
+# from tkinter import LEFT
 import cython
 from dataclasses import *
 import logging
@@ -352,8 +352,8 @@ def run():
     
     count = 0
 
+    screen = pygame.display.set_mode(screen_size)
     while True:
-        screen = pygame.display.set_mode(screen_size)
         for event in pygame.event.get():
             if event.type==pygame.QUIT:
                 break
