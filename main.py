@@ -45,21 +45,160 @@ AISLE_COLOR = WHITE
 WALL_COLOR = BLACK
 GOAL_COLOR = ORANGE
 
-scale = 5
 TILE_SIZE = (30, 30)
 screen_size = (TILE_SIZE[0]*scale, TILE_SIZE[0]*scale)
 TILE = (screen_size[0]//TILE_SIZE[0], screen_size[1]//TILE_SIZE[1])
 maze = []
 
-def init_scale(scale_):
-    global scale, screen_size, TILE_SIZE, TILE
-    scale = scale_
-    screen_size = (TILE_SIZE[0]*scale, TILE_SIZE[0]*scale)
-    TILE = (screen_size[0]//TILE_SIZE[0], screen_size[1]//TILE_SIZE[1])
-
 x = TILE_SIZE[0]
 y = TILE_SIZE[1]
 
+class maze:
+    def __init__(self, pos):
+        self.pos = pos
+        self.maze = []
+        self.scale = 5
+        self.screen_size = (TILE_SIZE[0]*scale, TILE_SIZE[0]*scale)
+
+    def init_scale(scale_):
+        global scale, screen_size, TILE_SIZE, TILE
+        scale = scale_
+        screen_size = (TILE_SIZE[0]*scale, TILE_SIZE[0]*scale)
+        TILE = (screen_size[0]//TILE_SIZE[0], screen_size[1]//TILE_SIZE[1])
+    
+    def is_eq_objattr(maze, pos, attr):
+        return maze[pos[1]][pos[0]] == attr
+
+    def hole_digg():
+        global maze
+        maze = [[ObjAttr.WALL for _ in range(TILE[1])] for _ in range(TILE[0])]
+
+        print("[hole_digg]")
+        
+        for j in range(TILE[1]):
+            print([1 if s == ObjAttr.WALL else 0 for s in maze[j]])
+
+        is_aisle_cand = (lambda i, j: 
+                        i in range(1, TILE[0]-1) and
+                        j in range(1, TILE[1]-1) and
+                        i%2 and j%2)
+        cand = [(i, j) for i in range(TILE[0])
+            for j in range(TILE[1]) if is_aisle_cand(i, j)]
+        wall = [(i, j) for i in range(TILE[0])
+            for j in range(TILE[1]) if is_aisle_cand(i, j)]
+        size = len(wall)
+        while len(wall) > 0:
+            # decide start position
+            index_cand = random.randint(0, len(cand) - 1)
+            rand_cand = cand[index_cand]
+            if not len(wall) == size:
+                if is_eq_objattr(maze, rand_cand, ObjAttr.WALL):
+                    continue
+            # decide where to digg hole
+            pos = Pos(rand_cand, maze)
+            pos.hole_digg()
+            for a in wall:
+                if maze[a[1]][a[0]] == ObjAttr.AISLE:
+                    wall.remove(a)
+
+    def wall_extend():
+        global maze
+        maze = []
+        for j in range(TILE[1]):
+            row = []
+            for i in range(TILE[0]):
+                # outer wall
+                if (i == 0 or j == 0 or
+                        i == TILE[0]-1 or j == TILE[1]-1):
+                    row.append(ObjAttr.WALL)
+                else:
+                    row.append(ObjAttr.AISLE)
+                    
+            maze.append(row)
+
+        print("[wall_extend]")
+        
+        for j in range(TILE[1]):
+            print([1 if s == ObjAttr.WALL else 0 for s in maze[j]])
+        
+        is_wall_cand = (lambda i, j: 
+                        i in range(1, TILE[0]-1) and
+                        j in range(1, TILE[1]-1) and
+                        i%2 == 0 and j%2 == 0)
+        cand = [(i, j) for i in range(TILE[0])
+            for j in range(TILE[1]) if is_wall_cand(i, j)]
+        while len(cand) > 0:
+            # decide start position
+            index_cand = random.randint(0, len(cand) - 1)
+            rand_cand = cand[index_cand]
+            if is_eq_objattr(maze, rand_cand, ObjAttr.WALL):
+                cand.pop(index_cand)
+                continue
+            # decide where to extend wall
+            pos = Pos(rand_cand, maze)
+            pos.wall_extend()
+
+    def bar_down():
+        global maze
+        maze = []
+        for j in range(TILE[1]):
+            row = []
+            for i in range(TILE[0]):
+                # outer wall
+                if (i == 0 or j == 0 or
+                        i == TILE[0]-1 or j == TILE[1]-1):
+                    row.append(ObjAttr.WALL)
+                elif (i%2 == 0 and j%2 == 0):
+                    row.append(ObjAttr.WALL)
+                else:
+                    row.append(ObjAttr.AISLE)
+                    
+            # print([1 if s == ObjAttr.WALL else 0 for s in row])
+            maze.append(row)
+
+        print("[bar_down]")
+        for j in range(TILE[1]):
+            for i in range(TILE[0]):
+                if (i == 0 or j == 0 or
+                        i == TILE[0]-1 or j == TILE[1]-1):
+                    # nothing to do
+                    pass
+                elif (i%2 == 0 and j%2 == 0):
+                    pos = Pos((i, j), maze)
+                    pos.bar_down()
+                else:
+                    continue
+        
+    def make_maze():
+        global x, y, maze
+        
+        # bar_down()
+        # wall_extend()
+        hole_digg()
+
+        for j in range(TILE[1]):
+            print([1 if s in [ObjAttr.WALL]  else 0 for s in maze[j]])
+
+        while True:
+            i = random.randint(0, TILE[0]-1)
+            j = random.randint(0, TILE[1]-1)
+            if (maze[j][i] == ObjAttr.AISLE and
+                    not i == x//TILE_SIZE[0] and not j == y//TILE_SIZE[1]):
+                maze[j][i] = ObjAttr.GOAL
+                # print(f"goal:({i}, {j}), cur:({x//TILE_SIZE[0]}, {y//TILE_SIZE[1]})")
+                break
+
+    def is_not_collision(x, y):
+        global maze
+        t_x = x // TILE_SIZE[0]
+        t_y = y // TILE_SIZE[1]
+        if 0 <= t_x < TILE[0] and 0 <= t_y < TILE[1]:
+            if maze[t_y][t_x] == ObjAttr.AISLE:
+                return True
+            elif maze[t_y][t_x] == ObjAttr.GOAL:
+                make_maze()
+                return True
+        return False
 class Pos:
     def __init__(self, pos, maze):
         self.x = pos[0]
@@ -108,7 +247,7 @@ class Pos:
 
     def chack_2step_forward(self, dire):
         x, y = self.get_move_pos(dire, 2)
-        if (x in range(TILE[0]) and y in range(TILE[0]) and
+        if (x in range(TILE[0]) and y in range(TILE[1]) and
                 not (x, y) in self.stack):
             return self.maze[y][x]
         else:
@@ -130,7 +269,7 @@ class Pos:
         for w in self.stack:
             self.maze[w[1]][w[0]] = ObjAttr.WALL
     
-    def disable_wall(self):
+    def enable_aisle(self):
         for w in self.stack:
             self.maze[w[1]][w[0]] = ObjAttr.AISLE
 
@@ -148,6 +287,7 @@ class Pos:
                 if attr == ObjAttr.AISLE:
                     self.movable_init()
                     self.move(one_dire)
+                    continue
                 elif attr == ObjAttr.WALL:
                     self.move(one_dire)
                     self.enable_wall()
@@ -164,7 +304,6 @@ class Pos:
         return False
 
     def bar_down(self):
-        a, b = self.x, self.y
         self.movable_init()
         if not self.y == 2:
             self.movable.remove(DIRE.U)
@@ -173,118 +312,32 @@ class Pos:
             x, y = self.get_move_pos(dire)
             if maze[y][x] != ObjAttr.WALL:
                 maze[y][x] = ObjAttr.WALL
-                # print(f"({a}, {b}) : {dire}")
                 break
             else:
                 self.movable.remove(dire)
 
-def is_eq_objattr(maze, pos, attr):
-    return maze[pos[1]][pos[0]] == attr
+    def hole_digg(self):
+        while len(self.movable)>0:
+            # random choise one direction
+            index, one_dire = self.get_random_direct()
+            if attr := self.chack_2step_forward(one_dire):
+                if attr == ObjAttr.WALL:
+                    self.movable_init()
+                    self.move(one_dire)
+                    continue
+                elif attr == ObjAttr.AISLE:
+                    # self.move(one_dire)
+                    self.enable_aisle()
+                    return True
+                else:
+                    raise Exception
 
-def wall_extend():
-    global maze
-    maze = []
-    for j in range(TILE[1]):
-        row = []
-        for i in range(TILE[0]):
-            # outer wall
-            if (i == 0 or j == 0 or
-                    i == TILE[0]-1 or j == TILE[1]-1):
-                row.append(ObjAttr.WALL)
-            else:
-                row.append(ObjAttr.AISLE)
-                
-        # print([1 if s == ObjAttr.WALL else 0 for s in row])
-        maze.append(row)
-
-    print("[wall_extend]")
-    
-    for j in range(TILE[1]):
-        print([1 if s == ObjAttr.WALL else 0 for s in maze[j]])
-    
-    is_wall_cand = (lambda i, j: 
-                    i in range(1, TILE[0]-1) and
-                    j in range(1, TILE[1]-1) and
-                    i%2 == 0 and j%2 == 0)
-    cand = [(i, j) for i in range(TILE[0])
-        for j in range(TILE[1]) if is_wall_cand(i, j)]
-    while len(cand) > 0:
-        # decide start position
-        index_cand = random.randint(0, len(cand) - 1)
-        rand_cand = cand[index_cand]
-        if is_eq_objattr(maze, rand_cand, ObjAttr.WALL):
-            cand.pop(index_cand)
-            continue
-        # decide where to extend wall
-        pos = Pos(rand_cand, maze)
-        pos.wall_extend()
-
-    for j in range(TILE[1]):
-        print([1 if s in [ObjAttr.WALL]  else 0 for s in maze[j]])
-
-def bar_down():
-    global maze
-    maze = []
-    for j in range(TILE[1]):
-        row = []
-        for i in range(TILE[0]):
-            # outer wall
-            if (i == 0 or j == 0 or
-                    i == TILE[0]-1 or j == TILE[1]-1):
-                row.append(ObjAttr.WALL)
-            elif (i%2 == 0 and j%2 == 0):
-                row.append(ObjAttr.WALL)
-            else:
-                row.append(ObjAttr.AISLE)
-                
-        # print([1 if s == ObjAttr.WALL else 0 for s in row])
-        maze.append(row)
-
-    print("[bar_down]")
-    for j in range(TILE[1]):
-        for i in range(TILE[0]):
-            if (i == 0 or j == 0 or
-                    i == TILE[0]-1 or j == TILE[1]-1):
-                # nothing to do
-                pass
-            elif (i%2 == 0 and j%2 == 0):
-                pos = Pos((i, j), maze)
-                pos.bar_down()
-            else:
-                continue
-    
-    for j in range(TILE[1]):
-        print([1 if s == ObjAttr.WALL else 0 for s in maze[j]])
-
-def aisle_extend():
-    return
-
-def make_maze():
-    global x, y, maze
-    
-    # bar_down()
-    wall_extend()
-
-    while True:
-        i = random.randint(0, TILE[0]-1)
-        j = random.randint(0, TILE[1]-1)
-        if (maze[j][i] == ObjAttr.AISLE and
-                not i == x//TILE_SIZE[0] and not j == y//TILE_SIZE[1]):
-            maze[j][i] = ObjAttr.GOAL
-            # print(f"goal:({i}, {j}), cur:({x//TILE_SIZE[0]}, {y//TILE_SIZE[1]})")
-            break
-
-def is_not_collision(x, y):
-    global maze
-    t_x = x // TILE_SIZE[0]
-    t_y = y // TILE_SIZE[1]
-    if 0 <= t_x < TILE[0] and 0 <= t_y < TILE[1]:
-        if maze[t_y][t_x] == ObjAttr.AISLE:
-            return True
-        elif maze[t_y][t_x] == ObjAttr.GOAL:
-            make_maze()
-            return True
-    return False
+            self.movable.pop(index)
+            if len(self.movable) == 0:
+                self.enable_aisle()
+                return True
+        
+        return False
 
 def run():
     global maze, x, y, scale
@@ -322,6 +375,13 @@ def run():
                 init_scale(t)
                 screen = pygame.display.set_mode(screen_size)
                 make_maze()
+
+        # if (press[pygame.K_d]):
+        #     print(scale)
+        #     if (t := scale-2) in range(5, 100):
+        #         init_scale(t)
+        #         screen = pygame.display.set_mode(screen_size)
+        #         make_maze()
 
         if (press[pygame.K_m]):
             make_maze()
